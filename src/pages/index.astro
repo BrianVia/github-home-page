@@ -1,0 +1,219 @@
+---
+import "../styles/tailwind.css";
+
+const apiUrl = new URL('/api/gh/overview', Astro.url);
+const { buckets, generatedAt, scopeOrgs } = await fetch(apiUrl).then(r => r.json());
+
+const linearUrl = new URL('/api/linear/issues', Astro.url);
+const linearData = await fetch(linearUrl).then(r => r.json());
+const linearIssues = linearData.issues || [];
+
+function timeAgo(date: string) {
+  const now = new Date();
+  const past = new Date(date);
+  const seconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+const statusDot = (s: string | null) => {
+  switch (s) {
+    case "SUCCESS": return "bg-emerald-500";
+    case "FAILURE":
+    case "ERROR": return "bg-rose-500";
+    case "PENDING":
+    case "ACTION_REQUIRED":
+    case "TIMED_OUT": return "bg-amber-500";
+    default: return "bg-zinc-400";
+  }
+};
+const statusPill = (s: string | null) => {
+  const base = "pill";
+  switch (s) {
+    case "SUCCESS": return `${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200`;
+    case "FAILURE":
+    case "ERROR": return `${base} bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200`;
+    case "PENDING":
+    case "ACTION_REQUIRED":
+    case "TIMED_OUT": return `${base} bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200`;
+    default: return `${base} bg-zinc-100 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200`;
+  }
+};
+---
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <title>GitHub Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body class="min-h-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <header class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-6">
+        <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <div class="text-sm text-zinc-600 dark:text-zinc-400">
+          GitHub: {scopeOrgs?.length ? scopeOrgs.join(", ") : "all"} • refreshed {new Date(generatedAt).toLocaleTimeString()}
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+        <!-- Left section: GitHub PRs stacked vertically -->
+        <div class="space-y-6">
+          <!-- Review requested -->
+          <div class="card p-4">
+            <h2 class="text-lg font-medium mb-3">🧪 Review requested</h2>
+            {buckets.review.length === 0 ? (
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">Nothing to review — enjoy the silence.</p>
+            ) : (
+              <ul class="space-y-2">
+                {buckets.review.map((p) => (
+                  <li class="flex items-start gap-3">
+                    <span class={`mt-1 size-2 min-w-2 rounded-full ${statusDot(p.status.rollup)}`} aria-hidden="true"></span>
+                    <div class="min-w-0">
+                      <a class="font-medium hover:underline truncate block" href={p.url} target="_blank" rel="noreferrer">
+                        {p.repo.owner}/{p.repo.name}#{p.number}
+                      </a>
+                      <div class="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                        {p.title}{p.isDraft ? " (draft)" : ""}
+                      </div>
+                    </div>
+                    <span class={statusPill(p.status.rollup)}>{p.status.rollup ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <!-- My open PRs -->
+          <div class="card p-4">
+            <h2 class="text-lg font-medium mb-3">✍️ My open PRs</h2>
+            {buckets.mine.length === 0 ? (
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">No open PRs</p>
+            ) : (
+              <ul class="space-y-2">
+                {buckets.mine.map((p) => (
+                  <li class="flex items-start gap-3">
+                    <span class={`mt-1 size-2 min-w-2 rounded-full ${statusDot(p.status.rollup)}`}></span>
+                    <div class="min-w-0">
+                      <a class="font-medium hover:underline truncate block" href={p.url} target="_blank" rel="noreferrer">
+                        {p.repo.owner}/{p.repo.name}#{p.number}
+                      </a>
+                      <div class="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                        {p.title}{p.isDraft ? " (draft)" : ""}
+                      </div>
+                    </div>
+                    <span class={statusPill(p.status.rollup)}>{p.status.rollup ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <!-- Assigned to me -->
+          <div class="card p-4">
+            <h2 class="text-lg font-medium mb-3">📌 Assigned to me</h2>
+            {buckets.assigned.length === 0 ? (
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">No PRs assigned</p>
+            ) : (
+              <ul class="space-y-2">
+                {buckets.assigned.map((p) => (
+                  <li class="flex items-start gap-3">
+                    <span class={`mt-1 size-2 min-w-2 rounded-full ${statusDot(p.status.rollup)}`}></span>
+                    <div class="min-w-0">
+                      <a class="font-medium hover:underline truncate block" href={p.url} target="_blank" rel="noreferrer">
+                        {p.repo.owner}/{p.repo.name}#{p.number}
+                      </a>
+                      <div class="text-sm text-zinc-600 dark:text-zinc-400 truncate">{p.title}</div>
+                    </div>
+                    <span class={statusPill(p.status.rollup)}>{p.status.rollup ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <!-- Jobs for running PRs -->
+          {(buckets.review.concat(buckets.mine, buckets.assigned).some(p => p.jobs?.length)) && (
+            <section class="card p-4">
+              <h2 class="text-lg font-medium mb-3">⚙️ Current runner jobs</h2>
+              <ul class="space-y-2">
+                {buckets.review.concat(buckets.mine, buckets.assigned).map((p) => (
+                  p.jobs?.length ? (
+                    <li class="space-y-1">
+                      <div class="font-medium">{p.repo.owner}/{p.repo.name}#{p.number} — {p.title}</div>
+                      <ul class="pl-3 border-l border-zinc-200 dark:border-zinc-800 space-y-1">
+                        {p.jobs.map(j => (
+                          <li class="flex items-center justify-between gap-2 text-sm">
+                            <a href={j.html_url} target="_blank" rel="noreferrer" class="hover:underline">{j.name}</a>
+                            <div class="flex items-center gap-2">
+                              <span class="text-zinc-500 dark:text-zinc-400">{j.status}{j.conclusion ? ` (${j.conclusion})` : ""}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ) : null
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+
+        <!-- Right section: Linear Issues (1/3 width on large screens) -->
+        <div class="lg:col-span-1">
+          <div class="card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-lg font-medium">📋 Recent Issues</h2>
+              <span class="text-xs text-zinc-500 dark:text-zinc-400">{linearIssues.length}</span>
+            </div>
+            {linearIssues.length === 0 ? (
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">No recent issues</p>
+            ) : (
+              <ul class="space-y-3">
+                {linearIssues.map((issue: any) => (
+                  <li class="border-b border-zinc-200 dark:border-zinc-800 pb-3 last:border-0 last:pb-0">
+                    <a href={issue.url} target="_blank" rel="noreferrer" class="block group">
+                      <div class="flex items-start gap-2 mb-1">
+                        <span class="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">{issue.identifier}</span>
+                        <span
+                          class="pill text-xs"
+                          style={`background-color: ${issue.status.color}20; color: ${issue.status.color}`}
+                        >
+                          {issue.status.name}
+                        </span>
+                      </div>
+                      <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2 mb-1">
+                        {issue.title}
+                      </div>
+                      <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        {issue.project && (
+                          <span class="truncate">{issue.project.name}</span>
+                        )}
+                        {issue.project && issue.assignee && <span>•</span>}
+                        {issue.assignee && (
+                          <span class="truncate">{issue.assignee.name}</span>
+                        )}
+                        <span class="ml-auto">{timeAgo(issue.updatedAt)}</span>
+                      </div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

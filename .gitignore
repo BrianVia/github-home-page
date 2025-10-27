@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.astro/
+
+# environment variables
+.dev.vars
+.env
+.env.*
+!.env.example
+
+# macOS-specific files
+.DS_Store
+
+# wrangler
+.wrangler/
+wrangler.toml.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

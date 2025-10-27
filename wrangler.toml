@@ -1,0 +1,11 @@
+name = "gh-home"
+compatibility_date = "2025-10-01"
+
+[vars]
+GH_QUERY_ORGS = "dfinitiv,BrianVia"
+GH_CACHE_TTL = "90"
+LINEAR_CACHE_TTL = "90"
+
+[[kv_namespaces]]
+binding = "GH_CACHE"
+id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
