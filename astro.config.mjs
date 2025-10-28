@@ -1,9 +1,12 @@
+import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
-import tailwind from "@astrojs/tailwind";
+import tailwindcss from "@tailwindcss/vite";
 
-export default {
+export default defineConfig({
   output: "server",
-  adapter: cloudflare(),
-  integrations: [tailwind()],
+  adapter: cloudflare({ mode: "directory" }),
+  vite: {
+    plugins: [tailwindcss()]
+  },
   server: { host: true, port: 4321 }
-};
+});
