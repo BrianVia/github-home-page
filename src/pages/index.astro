@@ -1,10 +1,10 @@
 ---
 import "../styles/tailwind.css";
 
-const apiUrl = new URL('/api/gh/overview', Astro.url);
+const apiUrl = new URL('/api/gh/overview', Astro.url.origin);
 const { buckets, generatedAt, scopeOrgs } = await fetch(apiUrl).then(r => r.json());
 
-const linearUrl = new URL('/api/linear/issues', Astro.url);
+const linearUrl = new URL('/api/linear/issues', Astro.url.origin);
 const linearData = await fetch(linearUrl).then(r => r.json());
 const linearIssues = linearData.issues || [];
 
